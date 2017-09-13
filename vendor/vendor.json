@@ -1,0 +1,61 @@
+{
+	"comment": "",
+	"ignore": "test appengine",
+	"package": [
+		{
+			"checksumSHA1": "4QnLdmB1kG3N+KlDd1N+G9TWAGQ=",
+			"path": "github.com/beorn7/perks/quantile",
+			"revision": "3ac7bf7a47d159a033b107610db8a1b6575507a4",
+			"revisionTime": "2016-02-29T21:34:45Z"
+		},
+		{
+			"checksumSHA1": "piwYMQqpsfAur670v6rFg6gqk/c=",
+			"path": "github.com/golang/protobuf/proto",
+			"revision": "874264fbbb43f4d91e999fecb4b40143ed611400",
+			"revisionTime": "2016-07-11T13:55:00Z"
+		},
+		{
+			"checksumSHA1": "Q2vw4HZBbnU8BLFt8VrzStwqSJg=",
+			"path": "github.com/matttproud/golang_protobuf_extensions/pbutil",
+			"revision": "d0c3fe89de86839aecf2e0579c40ba3bb336a453",
+			"revisionTime": "2015-10-11T10:25:29Z"
+		},
+		{
+			"checksumSHA1": "wQEloMPTblRcywDZnt3WJYjyiv8=",
+			"path": "github.com/prometheus/client_golang/prometheus",
+			"revision": "18acf9993a863f4c4b40612e19cdd243e7c86831",
+			"revisionTime": "2016-02-23T12:27:30Z"
+		},
+		{
+			"checksumSHA1": "DvwvOlPNAgRntBzt3b3OSRMS2N4=",
+			"path": "github.com/prometheus/client_model/go",
+			"revision": "fa8ad6fec33561be4280a8f0514318c79d7f6cb6",
+			"revisionTime": "2015-02-12T10:17:44Z"
+		},
+		{
+			"checksumSHA1": "Zsc9IQzQDkOzqiAITqxEm0JXdws=",
+			"path": "github.com/prometheus/common/expfmt",
+			"revision": "e8eabff8812b05acf522b45fdcd725a785188e37",
+			"revisionTime": "2016-02-28T19:17:49Z"
+		},
+		{
+			"checksumSHA1": "GWlM3d2vPYyNATtTFgftS10/A9w=",
+			"path": "github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg",
+			"revision": "e8eabff8812b05acf522b45fdcd725a785188e37",
+			"revisionTime": "2016-02-28T19:17:49Z"
+		},
+		{
+			"checksumSHA1": "ItCsU2tsKlvNqlUZH30Df8byZTw=",
+			"path": "github.com/prometheus/common/model",
+			"revision": "e8eabff8812b05acf522b45fdcd725a785188e37",
+			"revisionTime": "2016-02-28T19:17:49Z"
+		},
+		{
+			"checksumSHA1": "kO2MAzPuortudABaRd7fY+7EaoM=",
+			"path": "github.com/prometheus/procfs",
+			"revision": "406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8",
+			"revisionTime": "2015-10-29T19:50:50Z"
+		}
+	],
+	"rootPath": "github.com/qbox/pxc-deploy"
+}

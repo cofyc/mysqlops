@@ -1,0 +1,23 @@
+# check mysql backup is running or not
+ALERT pxc_backup_not_running
+  IF time() - pxc_backup_last_time > 7200
+  FOR 10s
+  LABELS {
+    severity="critical"
+  }
+  ANNOTATIONS {
+    summary = "Host {{$labels.node}} mysql backup not running",
+    description = "Host {{$labels.node}} mysql backup not running for ${{value}} seconds"
+  }
+
+# check mysql backup functions well or not
+ALERT pxc_backup_size_too_small
+  IF pxc_backup_last_size < 1024
+  FOR 10s
+  LABELS {
+    severity="critical"
+  }
+  ANNOTATIONS {
+    summary = "Host {{$labels.node}} mysql backup size too small",
+    description = "Host {{$labels.node}} mysql backup size too small"
+  }
