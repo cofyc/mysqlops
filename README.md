@@ -3,6 +3,7 @@
 ## Table of Contents
 
 * [Supported Platforms](#supported-platforms)
+* [Supported MySQL Distributions](#supported-mysql-distributions)
 * [Development](#development)
 * [Operations](#operation)
   * [Install PXC on bare metal machines](#install-pxc-on-bare-metal-machines)
@@ -26,6 +27,10 @@
 - Ubuntu 14.04
 - Ubuntu 16.04
 - CentOS 7
+
+## Supported MySQL Distributions
+
+- Percona Server Cluster 5.6/5.7
 
 ## Development
 

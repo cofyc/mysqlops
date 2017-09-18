@@ -12,7 +12,7 @@ function usage() {
     local rootpass=$(uuidgen)
     local sstpass=$(uuidgen)
     cat <<EOF
-Usage: $(basename $0) [-h] -d <data_dir> -b <bind_address> -c <cluster_address> -p <password> -s <root_password> -e [development|production] [bootstrap]
+Usage: $(basename $0) [-h] -d <data_dir> -b <bind_address> -c <cluster_address> -p <password> -s <root_password> -e [development|production] -v [5.6|5.7] [bootstrap] 
 
 Examples:
 
@@ -33,36 +33,58 @@ CLUSTER_ADDRESS=""
 CLUSTER_NAME="pxc_cluster"
 PASSWORD="root"
 SST_PASSWORD="sstpass"
+MYSQL_VERSION="5.7"
+SERVER_ID=""
 
-while getopts "h?d:b:c:e:p:s:" opt; do
+while getopts "h?d:b:c:e:p:s:v:i:" opt; do
     case "$opt" in
     h|\?)
         usage
         exit 0
-    ;;
+        ;;
     d)
         DATA_DIR="${OPTARG%/}"
-    ;;
+        ;;
     b)
         BIND_ADDRESS="${OPTARG}"
-    ;;
+        ;;
     c)
         CLUSTER_ADDRESS="${OPTARG}"
-    ;;
+        ;;
     e)
         ENVIRONMENT="${OPTARG}"
-    ;;
+        ;;
     p)
         PASSWORD="${OPTARG}"
-    ;;
+        ;;
     s)
         SST_PASSWORD="${OPTARG}"
-    ;;
+        ;;
+    v)
+        MYSQL_VERSION="${OPTARG}"
+        ;;
+    i)
+        SERVER_ID="${OPTARG}"
+        ;;
     esac
 done
 
 shift $((OPTIND-1))
 [ "$1" = "--" ] && shift
+
+if [ "$MYSQL_VERSION" != "5.6" -a "$MYSQL_VERSION" != "5.7" ]; then
+    echo "error: only 5.6/5.7 versions are supported"
+    usage
+    exit 1
+fi
+
+if [ "$MYSQL_VERSION" == "5.7" ]; then
+    if [ -z "$SERVER_ID" ]; then
+        echo "error: in 5.7, server_id should be specified, please specify by '-i <server_id>'" 1>&2
+        usage
+        exit 2
+    fi
+fi
 
 echo "ENVIRONMENT: $ENVIRONMENT"
 echo "DATA_DIR: $DATA_DIR"
@@ -72,6 +94,14 @@ echo "CLUSTER_NAME: $CLUSTER_NAME"
 echo "PASSWORD: $PASSWORD"
 echo "SST_PASSWORD: $SST_PASSWORD"
 echo "ARGS: $@"
+
+if [ "$MYSQL_VERSION" == "5.6" ]; then
+    APT_PKG="percona-xtradb-cluster-56"
+    YUM_PKG="Percona-XtraDB-Cluster-56"
+elif [ "$MYSQL_VERSION" == "5.7" ]; then
+    APT_PKG="percona-xtradb-cluster-57"
+    YUM_PKG="Percona-XtraDB-Cluster-57"
+fi
 
 # setup percona repo
 $ROOT/cluster/setup.sh
@@ -97,18 +127,26 @@ innodb_buffer_pool_size=5M
 innodb_log_buffer_size=256K
 query_cache_size=0
 EOF
-        apt-get install -y percona-xtradb-cluster-56
-        apt-get install -y percona-toolkit
-        apt-get install -y xinetd
+        apt-get install -y $APT_PKG
         /etc/init.d/mysql stop
     elif [[ "$GRAIN_OS" == "CentOS" ]]; then
-        yum install -y Percona-XtraDB-Cluster-56
-        yum install -y percona-toolkit
-        yum install -y xinetd
+        yum install -y $YUM_PKG
     fi
 else
-    # TODO: Check if mysql is pxc, if it's not PXC, let user uninstall first.
-    echo "MySQL is installed."
+    read -r -p "MySQL is installed, are you sure installed MySQL is what you want? [y/N] " response
+    if [[ ! $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
+        echo "Exit."
+        exit 1
+    fi
+fi
+
+# install percona-toolkit & xinetd
+if [[ "$GRAIN_OS" == "Ubuntu" ]]; then
+    apt-get install -y percona-toolkit
+    apt-get install -y xinetd
+elif [[ "$GRAIN_OS" == "CentOS" ]]; then
+    yum install -y percona-toolkit
+    yum install -y xinetd
 fi
 
 # my.cnf
@@ -120,7 +158,14 @@ $ROOT/cluster/gen-my-conf.sh -d $DATA_DIR -p "$PASSWORD" -e $ENVIRONMENT \
   -b "$BIND_ADDRESS" \
   -n "$CLUSTER_NAME" \
   -c "$CLUSTER_ADDRESS" \
-  -s "$SST_PASSWORD" > /etc/my.cnf
+  -s "$SST_PASSWORD" \
+  -v "$MYSQL_VERSION" \
+  -i "$SERVER_ID" \
+  > /etc/my.cnf
+if [ $? -ne 0 ]; then
+    kube::log::status "Configuring /etc/my.conf failed."
+    exit 1
+fi
 kube::log::status "Configuring /etc/my.conf done."
 
 ## install logrotate file
@@ -167,7 +212,12 @@ fi
 # start
 if [ "$1" == 'bootstrap' ]; then
     # init database
-    mysql_install_db --user=mysql --basedir=/usr
+    if [ "$MYSQL_VERSION" == "5.7" ]; then
+        # Since 5.7, mysql_install_db is deprecated.
+        mysqld --initialize-insecure --user=mysql --basedir=/usr
+    else
+        mysql_install_db --user=mysql --basedir=/usr
+    fi
     # start
     if [[ "$GRAIN_OS" == "Ubuntu" ]]; then
         /etc/init.d/mysql bootstrap-pxc
@@ -187,7 +237,7 @@ if [ "$1" == 'bootstrap' ]; then
     # secure/remove_remote_root
     mysql -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
     # secure/remove_test_database
-    mysql -e "DROP DATABASE test;"
+    mysql -e "DROP DATABASE IF EXISTS test;"
     mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%'"
     # flush privileges
     mysql -e "FLUSH PRIVILEGES;"

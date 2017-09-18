@@ -126,5 +126,6 @@ elif [[ "$GRAIN_OS" == "CentOS" ]]; then
         echo "Package percona-release-0.1-4 already installed, skipped."
     else
         yum install http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm
+        sed -i -r 's#http(s)?://repo.percona.com#https://mirrors.tuna.tsinghua.edu.cn\/percona#g'  /etc/yum.repos.d/percona-release.repo
     fi
 fi

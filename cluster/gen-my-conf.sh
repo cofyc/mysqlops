@@ -13,8 +13,8 @@ cd $ROOT
 source "${ROOT}/cluster/lib/init.sh"
 
 function usage() {
-    cat <<EOF
-Usage: $(basename $0) -d <data_dir> -p <password> -e <production|development> -b <bind_address> -n <cluste_name> -c <cluster_address> -s <sst_password>
+    cat <<EOF 1>&2
+Usage: $(basename $0) -d <data_dir> -p <password> -e <production|development> -b <bind_address> -n <cluste_name> -c <cluster_address> -s <sst_password> -v [5.6|5.7]
 
 Examples:
 
@@ -30,8 +30,10 @@ BIND_ADDRESS="0.0.0.0"
 CLUSTER_ADDRESS=""
 CLUSRER_NAME="pxc_cluster"
 SST_PASSWORD="s3cret"
+MYSQL_VERSION="5.7"
+SERVER_ID=""
 
-while getopts "h?p:e:d:b:c:n:s:" opt; do
+while getopts "h?p:e:d:b:c:n:s:v:i:" opt; do
     case "$opt" in
     h|\?)
         usage
@@ -58,8 +60,31 @@ while getopts "h?p:e:d:b:c:n:s:" opt; do
     s)
         SST_PASSWORD="${OPTARG}"
         ;;
+    v)
+        MYSQL_VERSION="${OPTARG}"
+        ;;
+    i)
+        SERVER_ID="${OPTARG}"
+        ;;
     esac
 done
+
+shift $((OPTIND-1))
+[ "$1" = "--" ] && shift
+
+if [ "$MYSQL_VERSION" != "5.6" -a "$MYSQL_VERSION" != "5.7" ]; then
+    echo "error: only 5.6/5.7 versions are supported" 1>&2
+    usage
+    exit 1
+fi
+
+if [ "$MYSQL_VERSION" == "5.7" ]; then
+    if [ -z "$SERVER_ID" ]; then
+        echo "error: in 5.7, server_id should be specified, please specify by '-i <server_id>'" 1>&2
+        usage
+        exit 2
+    fi
+fi
 
 function find_libgalera_ssm_path() {
     for f in /usr/lib/libgalera_smm.so /usr/lib64/libgalera_smm.so; do
@@ -92,6 +117,7 @@ echo "BIND_ADDRESS: $BIND_ADDRESS" 1>&2
 echo "CLUSTER_NAME: $CLUSTER_NAME" 1>&2
 echo "CLUSTER_ADDRESS: $CLUSTER_ADDRESS" 1>&2
 echo "SST_PASSWORD: $SST_PASSWORD" 1>&2
+echo "MYSQL_VERSION: $MYSQL_VERSION" 1>&2
 
 LIBGALERA_SSM_PATH=$(find_libgalera_ssm_path)
 echo "LIBGALERA_SSM_PATH: $LIBGALERA_SSM_PATH" 1>&2
@@ -148,7 +174,7 @@ wsrep_provider_options         = "gcache.size=512M"
 wsrep_cluster_address          = gcomm://${CLUSTER_ADDRESS}
 
 # See https://www.percona.com/doc/percona-xtradb-cluster/5.6/wsrep-system-index.html#wsrep_sync_wait.
-wsrep_sync_wait                = 1
+wsrep_sync_wait                = 0
 
 # Node address
 wsrep_node_address             = ${BIND_ADDRESS}
@@ -164,7 +190,6 @@ wsrep_sst_auth                 = "sstuser:${SST_PASSWORD}"
 
 # MyISAM #
 key-buffer-size                = 32M
-myisam-recover                 = FORCE,BACKUP
 
 # SAFETY #
 max-allowed-packet             = 16M
@@ -187,7 +212,8 @@ binlog_format                  = ROW
 # Uncomment following lines if you want to replicate asynchronously from a
 # non-member of the cluster.
 # Note: servier_id should be unique.
-#server_id                      = ${SERVER_ID}
+# In 5.7, server_id should be specifed if you enabled binary logging.
+server_id                      = ${SERVER_ID}
 #log_slave_updates
 #relay-log                      = mysql-relay-bin
 
@@ -218,6 +244,10 @@ innodb_autoinc_lock_mode       = 2
 log-error                      = ${DATA_DIR}/mysql-error.log
 slow-query-log                 = 1
 slow-query-log-file            = ${DATA_DIR}/mysql-slow.log
+
+# CHARSET #
+character-set-server          = utf8
+collation-server              = utf8_general_ci
 
 # MISC #
 explicit_defaults_for_timestamp
