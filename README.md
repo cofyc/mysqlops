@@ -72,6 +72,13 @@ sh $ mkdir /path/to/mysql
 sh $ /path/to/mysqlops/cluster/install-pxc.sh -d /path/to/mysql/data -b <node-ip> -c <node-ip> -p <mysql-root-password> -s <sst-password> -e production bootstrap
 ```
 
+For single-node cluster, you need to start MySQL in `--wsrep-new-cluster` mode. With systemd, you can configure it by running:
+
+```
+systemctl disable mysql
+systemctl enable mysql@bootstrap
+```
+
 #### PXC multi-node cluster
 
 Bootstrap cluster on node 1 first:
@@ -152,11 +159,17 @@ If single-node cluster crashes, whole cluster is down. So you need to recover
 the cluster, please run:
 
 ```
-/etc/init.d/mysql bootstrap-pxc
+/etc/init.d/mysql bootstrap-pxc # upstart
+systemctl start mysql@bootstrap # systemd
 ```
 
 In production, you need to let the machine to start MySQL in bootstrap mode on
-reboot.
+reboot. With systemd, you can configure it by running:
+
+```
+systemctl disable mysql
+systemctl enable mysql@bootstrap
+```
 
 2) For multi-nodes cluster
 
