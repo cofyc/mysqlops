@@ -87,10 +87,10 @@ echo "ARGS: $@"
 
 if [ "$MYSQL_VERSION" == "5.6" ]; then
     APT_PKG="percona-server-server-5.6"
-    YUM_PKG="Percona-Server-Server-5.6"
+    YUM_PKG="Percona-Server-server-56"
 elif [ "$MYSQL_VERSION" == "5.7" ]; then
     APT_PKG="percona-server-server-5.7"
-    YUM_PKG="Percona-Server-Server-5.7"
+    YUM_PKG="Percona-Server-server-57"
 fi
 
 # setup percona repo
@@ -143,23 +143,28 @@ elif [[ "$GRAIN_OS" == "CentOS" ]]; then
     yum install -y percona-toolkit
 fi
 
-# my.cnf
-
-## clear default configuration files
-# test -f /etc/mysql/my.cnf && mv /etc/mysql/my.cnf /etc/mysql/my.cnf.defaults
-kube::log::status "Configuring /etc/mysql/my.conf."
+# Configure my.cnf.
+#
+# We simply override /etc/my.cnf, which is high precedence MySQL configure file.
+#
+MYSQL_CNF_FILE=/etc/my.cnf
+test -f $MYSQL_CNF_FILE && mv $MYSQL_CNF_FILE ${MYSQL_CNF_FILE}.save
+kube::log::status "Configuring $MYSQL_CNF_FILE."
 $ROOT/cluster/gen-my-conf.sh -d $DATA_DIR -p "$PASSWORD" -e $ENVIRONMENT \
   -b "$BIND_ADDRESS" \
   -v "$MYSQL_VERSION" \
   -i "$SERVER_ID" \
-  > /etc/mysql/my.cnf
+  > $MYSQL_CNF_FILE
 if [ $? -ne 0 ]; then
-    kube::log::status "Configuring /etc/mysql/my.conf failed."
+    kube::log::status "Configuring $MYSQL_CNF_FILE failed."
     exit 1
 fi
-kube::log::status "Configuring /etc/mysql/my.conf done."
+kube::log::status "Configuring $MYSQL_CNF_FILE done."
 
-## install logrotate file
+# Configure logrotate.
+#
+# We use logrotate to rotate mysql slow logs.
+#
 cat <<EOF > /etc/logrotate.d/mysql
 ${DATA_DIR}/mysql-slow.log {
     nocompress
@@ -212,22 +217,30 @@ if [ "$MYSQL_VERSION" == "5.7" ]; then
 else
     mysql_install_db --user=mysql --basedir=/usr
 fi
+
 # start
 if which systemctl &>/dev/null; then
-    systemctl start mysql
+    if [[ "$GRAIN_OS" == "Ubuntu" ]]; then
+        systemctl start mysql
+    else
+        systemctl start mysqld
+    fi
 else
     /etc/init.d/mysql stop
 fi
+
 # change root password (default password is empty)
 mysqladmin --user=root --password='' password "$PASSWORD" # from localhost
 mysqladmin --host 127.0.0.1 --user=root --password='' password "$PASSWORD" # from 127.0.0.1
-# setup sst user
-mysql -e "GRANT RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO 'sstuser'@'localhost' IDENTIFIED BY '${SST_PASSWORD}';"
+
+## Secure Your MySQL Installation.
+#
 # do what mysql_secure_installation do
+#
 # secure/remove_anonymous_users
-mysql -e "DELETE FROM mysql.user WHERE User='';"
+mysql -e "DELETE FROM mysql.user WHERE User = '';"
 # secure/remove_remote_root
-mysql -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
+mysql -e "DELETE FROM mysql.user WHERE User = 'root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
 # secure/remove_test_database
 mysql -e "DROP DATABASE IF EXISTS test;"
 mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%'"
