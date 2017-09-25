@@ -21,7 +21,7 @@ function usage() {
 }
 
 if [ $# -lt 2 ]; then
-	usage
+    usage
     exit
 fi
 
@@ -38,17 +38,17 @@ action=$2
 
 if ! in_list "$t" $TESTS; then
     echo "error: invalid test"
-	usage
-	exit
+    usage
+    exit
 fi
 
 if ! which sysbench &>/dev/null; then
-    if ! is_pkg_installed sysbench; then
-	if [[ "$GRAIN_OS" == "Ubuntu" ]]; then
-	    apt-get install -y sysbench
-	elif [[ "$GRAIN_OS" == "CentOS" ]]; then
-	    :
-	fi
+    if [[ "$GRAIN_OS" == "Ubuntu" ]]; then
+        if ! apt::is_pkg_installed sysbench; then
+            apt-get install -y sysbench
+        fi
+    elif [[ "$GRAIN_OS" == "CentOS" ]]; then
+        :
     fi
 fi
 

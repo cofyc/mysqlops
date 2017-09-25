@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function is_pkg_installed() {
+function apt::is_pkg_installed() {
     dpkg-query --showformat='${Status}\n' -W "$1" 2>/dev/null | grep ' installed$' &>/dev/null
 }
 
@@ -114,4 +114,20 @@ function prepend_path() {
         eval "$1=\$(uniq_path \$$1)"
         export $1
     fi
+}
+
+
+### MySQL Utilities ###
+
+function detect_mycnf_path() {
+   for f in /etc/my.cnf /etc/mysql/my.cnf; do
+       if test -f $f; then
+           echo $f
+           break
+       fi
+   done
+}
+
+function detech_mysql_version() {
+    mysql --version | perl -lne 'print $1 if /Distrib (5\.\d)/' 2>/dev/null
 }

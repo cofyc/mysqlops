@@ -119,13 +119,6 @@ echo "CLUSTER_ADDRESS: $CLUSTER_ADDRESS" 1>&2
 echo "SST_PASSWORD: $SST_PASSWORD" 1>&2
 echo "MYSQL_VERSION: $MYSQL_VERSION" 1>&2
 
-LIBGALERA_SSM_PATH=$(find_libgalera_ssm_path)
-echo "LIBGALERA_SSM_PATH: $LIBGALERA_SSM_PATH" 1>&2
-if [ -z "$LIBGALERA_SSM_PATH" ]; then
-    echo "libgalera_smm.so not found"
-    exit 1
-fi
-
 INNODB_BUFFER_SIZE="32M"
 INNODB_LOGFILE_SIZE="32M"
 MAX_CONNECTIONS="128"
@@ -164,6 +157,21 @@ socket                         = ${RUN_DIR}/mysql.sock
 pid-file                       = ${RUN_DIR}/mysql.pid
 bind-address                   = ${BIND_ADDRESS}
 
+EOF
+
+if [ "$CLUSTER_ADDRESS" != "" ]; then
+#
+# Configure PXC Gelera Options.
+#
+
+LIBGALERA_SSM_PATH=$(find_libgalera_ssm_path)
+echo "LIBGALERA_SSM_PATH: $LIBGALERA_SSM_PATH" 1>&2
+if [ -z "$LIBGALERA_SSM_PATH" ]; then
+    echo "libgalera_smm.so not found"
+    exit 1
+fi
+
+    cat <<EOF
 # GELERA #
 
 # Path to Galera library
@@ -187,6 +195,10 @@ wsrep_cluster_name             = ${CLUSTER_NAME}
 
 # Authentication for SST method
 wsrep_sst_auth                 = "sstuser:${SST_PASSWORD}"
+EOF
+fi
+
+cat <<EOF
 
 # MyISAM #
 key-buffer-size                = 32M

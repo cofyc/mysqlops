@@ -35,15 +35,6 @@ function datadir_from_cnf() {
     awk '/datadir/ { print $3 }' $1
 }
 
-function detect_mycnf_path() {
-   for f in /etc/my.cnf /etc/mysql/my.cnf; do
-       if test -f $f; then
-           echo $f
-           break
-       fi
-   done
-}
-
 MYCNF_PATH=$(detect_mycnf_path)
 if [ -z "$MYCNF_PATH" ]; then
    kube::log::error_exit "failed to detect my.cnf path"

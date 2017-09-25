@@ -26,7 +26,7 @@ kube::log::install_errexit
 
 function usage() {
     cat <<EOF
-Usage: $(basename $0) -d <data_dir>
+Usage: $(basename $0) -d <backup_dir>
 
 Examples:
 
@@ -74,15 +74,6 @@ function should_compress() {
     test "$(expr $timestamp + 3600 '*' 24)" -lt "$2"
 }
 
-function detect_mycnf_path() {
-   for f in /etc/my.cnf /etc/mysql/my.cnf; do
-       if test -f $f; then
-           echo $f
-           break
-       fi
-   done
-}
-
 MYCNF_PATH=$(detect_mycnf_path)
 if [ -z "$MYCNF_PATH" ]; then
    kube::log::error_exit "failed to detect my.cnf path"
@@ -108,6 +99,17 @@ shift $((OPTIND-1))
 
 if test -z "$BACKUP_DIR"; then
     kube::log::error_exit "please specify backup dir with '-d' option"
+fi
+
+MYSQL_VERSION=$(detech_mysql_version)
+
+if [ "$MYSQL_VERSION" == "5.6" ]; then
+    PKG="percona-xtrabackup"
+elif [ "$MYSQL_VERSION" == "5.7" ]; then
+    PKG="percona-xtrabackup-24"
+else
+    echo "error: unsupported MySQL version $MYSQL_VERSION"
+    exit -1
 fi
 
 BACKUP_FULL_DIR="$BACKUP_DIR/full"
@@ -136,6 +138,15 @@ flock -n 9 || { echo "Already an instance running, exit."; exit; }
 # check
 if ! ps -Cmysqld &>/dev/null; then
     kube::log::error_exit "MySQL is not running."
+fi
+
+# install percona-xtrabackup
+if [[ "$GRAIN_OS" == "Ubuntu" ]]; then
+    if ! apt::is_pkg_installed $PKG; then
+        apt-get install -y $PKG
+    fi
+elif [[ "$GRAIN_OS" == "CentOS" ]]; then
+    yum install -y percona-xtrabackup
 fi
 
 test -d "$BACKUP_DIR" || mkdir -p "$BACKUP_DIR"

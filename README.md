@@ -11,8 +11,9 @@
     * [PXC multi-node cluster](#pxc-multi-node-cluster)
     * [Install HAProxy on client](#install-haproxy-on-client)
     * [Check PXC status](#check-pxc-status)
-    * [Backup PXC](#backup-pxc)
-    * [Restore PXC](#restore-pxc)
+  * [Install Percona Server](#install-percona-server)
+  * [Backup MySQL](#backup)
+  * [Restore MySQL](#restore)
   * [Monitor](#monitor)
   * [Logging](#logging)
   * [Troubleshooting](#troubleshooting)
@@ -109,7 +110,13 @@ Then install and join other nodes:
 $ /path/to/mysqlops/cluster/check-pxc-status.sh
 ```
 
-#### Backup PXC
+### Install Percona Server
+
+```
+./cluster/install-server.sh -b 127.0.0.1 -p <root_password> -e production -i 1
+```
+
+### Backup
 
 If you want to backup your mysql to `/backup/mysql`, insert these into `crontab -e`:
 
@@ -117,7 +124,7 @@ If you want to backup your mysql to `/backup/mysql`, insert these into `crontab 
 */5 * * * * bash /path/to/mysqlops/cluster/backup.sh -d /backup/mysql > /var/log/pxc.backup.log 2>&1
 ```
 
-### Restore PXC
+### Restore
 
 First, install MySQL packages but don't start it.
 
