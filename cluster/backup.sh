@@ -146,7 +146,6 @@ if [[ "$GRAIN_OS" == "Ubuntu" ]]; then
         apt-get install -y $PKG
     fi
 elif [[ "$GRAIN_OS" == "CentOS" ]]; then
-    yum install -y percona-xtrabackup
     if ! yum list installed $PKG &>/dev/null; then
         yum install -y $PKG
     fi
