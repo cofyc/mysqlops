@@ -121,7 +121,7 @@ $ /path/to/mysqlops/cluster/check-pxc-status.sh
 If you want to backup your mysql to `/backup/mysql`, insert these into `crontab -e`:
 
 ```
-*/5 * * * * bash /path/to/mysqlops/cluster/backup.sh -d /backup/mysql > /var/log/pxc.backup.log 2>&1
+*/5 * * * * bash /path/to/mysqlops/cluster/backup.sh -d /backup/mysql > /var/log/mysqlops.backup.log 2>&1
 ```
 
 ### Restore
