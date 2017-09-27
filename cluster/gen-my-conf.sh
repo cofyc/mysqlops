@@ -172,7 +172,7 @@ if [ -z "$LIBGALERA_SSM_PATH" ]; then
 fi
 
     cat <<EOF
-# GELERA #
+# WSREP #
 
 # Path to Galera library
 wsrep_provider                 = ${LIBGALERA_SSM_PATH}
@@ -209,8 +209,6 @@ max-connect-errors             = 1000000
 skip-name-resolve
 sql-mode                       = NO_ENGINE_SUBSTITUTION
 sysdate-is-now                 = 1
-innodb                         = FORCE
-innodb-strict-mode             = 1
 
 # DATA STORAGE #
 datadir                        = ${DATA_DIR}
@@ -241,16 +239,28 @@ table-definition-cache         = ${TABLE_DEFINITION_CACHE}
 table-open-cache               = ${TABLE_OPEN_CACHE}
 
 # INNODB #
+innodb                         = FORCE
+innodb-strict-mode             = 1
 innodb-flush-method            = O_DIRECT
 innodb-log-files-in-group      = 2
 innodb-log-file-size           = ${INNODB_LOGFILE_SIZE}
 innodb-flush-log-at-trx-commit = 1
 innodb-file-per-table          = 1
 innodb-buffer-pool-size        = ${INNODB_BUFFER_SIZE}
+EOF
+
+if [ "$CLUSTER_ADDRESS" != "" ]; then
+
+    cat <<EOF
 
 # This changes how InnoDB autoincrement locks are managed and is a requirement
 # for Galera.
 innodb_autoinc_lock_mode       = 2
+EOF
+
+fi
+
+    cat <<EOF
 
 # LOGGING #
 log-error                      = ${DATA_DIR}/mysql-error.log

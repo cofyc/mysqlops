@@ -221,12 +221,18 @@ fi
 # start
 if which systemctl &>/dev/null; then
     if [[ "$GRAIN_OS" == "Ubuntu" ]]; then
-        systemctl start mysql
+        SERVER_NAME=mysql
     else
-        systemctl start mysqld
+        SERVER_NAME=mysqld
+    fi
+    systemctl start $SERVER_NAME
+    systemctl_status=$(systemctl is-enabled $SERVER_NAME)
+    if [ "$systemctl_status" != "enabled" ]; then
+        kube::log::status "`$SERVER_NAME` is not enabled, enabling it..."
+        systemctl enable $SERVER_NAME
     fi
 else
-    /etc/init.d/mysql stop
+    /etc/init.d/mysql start
 fi
 
 # change root password (default password is empty)
