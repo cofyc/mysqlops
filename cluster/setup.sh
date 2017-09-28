@@ -6,6 +6,7 @@ cd $ROOT
 source "${ROOT}/cluster/lib/init.sh"
 
 if [[ "$GRAIN_OS" == "Ubuntu" ]]; then
+    kube::log::status "Adding GPG key for apt."
     # key: 1C4CBDCDCD2EFD2A
     sudo apt-key add - <<'EOD'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -119,12 +120,14 @@ EOD
     cat <<EOF > /etc/apt/sources.list.d/percona.list
 deb ${url}/apt $codename main
 EOF
+    kube::log::status "Updating APT."
     apt-get update
 elif [[ "$GRAIN_OS" == "CentOS" ]]; then
     # https://www.percona.com/doc/percona-server/LATEST/installation/yum_repo.html
     if yum list installed percona-release-0.1-4 &>/dev/null; then
-        echo "Package percona-release-0.1-4 already installed, skipped."
+        kube::log::status "Package percona-release-0.1-4 already installed, skipped."
     else
+        kube::log::status "Installing percona-release.rpm."
         yum install -y http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm
         sed -i -r 's#http(s)?://repo.percona.com#https://mirrors.tuna.tsinghua.edu.cn\/percona#g'  /etc/yum.repos.d/percona-release.repo
     fi

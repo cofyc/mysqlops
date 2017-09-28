@@ -79,6 +79,8 @@ if [ "$MYSQL_VERSION" == "5.7" ]; then
     fi
 fi
 
+echo "GRAIN_OS: $GRAIN_OS"
+echo "MYSQL_VERSION: $MYSQL_VERSION"
 echo "ENVIRONMENT: $ENVIRONMENT"
 echo "DATA_DIR: $DATA_DIR"
 echo "BIND_ADDRESS: $BIND_ADDRESS"
@@ -144,11 +146,18 @@ elif [[ "$GRAIN_OS" == "CentOS" ]]; then
 fi
 
 # Configure my.cnf.
-#
-# We simply override /etc/my.cnf, which is high precedence MySQL configure file.
-#
+
+## Save old MySQL configuration files first.
+for f in /etc/my.cnf /etc/mysql/my.cnf; do
+    test -f $f && mv $f ${f}.save
+done
+if [ "$GRAIN_OS" == "Ubuntu" ]; then
+    # Hack to make /usr/share/mysql/mysql-systemd-start happy.
+    touch /etc/mysql/my.cnf
+fi
+
+## We only writes /etc/my.cnf because it has highest precedence.
 MYSQL_CNF_FILE=/etc/my.cnf
-test -f $MYSQL_CNF_FILE && mv $MYSQL_CNF_FILE ${MYSQL_CNF_FILE}.save
 kube::log::status "Configuring $MYSQL_CNF_FILE."
 $ROOT/cluster/gen-my-conf.sh -d $DATA_DIR -p "$PASSWORD" -e $ENVIRONMENT \
   -b "$BIND_ADDRESS" \
@@ -235,14 +244,22 @@ else
     /etc/init.d/mysql start
 fi
 
-# change root password (default password is empty)
-mysqladmin --user=root --password='' password "$PASSWORD" # from localhost
-mysqladmin --host 127.0.0.1 --user=root --password='' password "$PASSWORD" # from 127.0.0.1
+# Change root password (default password is empty) and make sure root user can
+# access from 'localhost', '127.0.0.1' and '::1'.
+kube::log::status "Configuring root user."
+mysql --host localhost --user=root --password='' -e "GRANT ALL PRIVILEGES ON *.* TO root@'127.0.0.1' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION;"
+mysql --host localhost --user=root --password='' -e "GRANT ALL PRIVILEGES ON *.* TO root@'::1' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION;"
+mysql --host localhost --user=root --password='' -e "GRANT ALL PRIVILEGES ON *.* TO root@'localhost' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION;"
+if [ $? -eq 0 ]; then
+    kube::log::status "Configuring root user done."
+else
+    kube::log::status "Failed to configure root user."
+fi
 
 ## Secure Your MySQL Installation.
-#
-# do what mysql_secure_installation do
-#
+# This simplies do what `mysql_secure_installation` do.
+
+kube::log::status "Securing your MySQL installation."
 # secure/remove_anonymous_users
 mysql -e "DELETE FROM mysql.user WHERE User = '';"
 # secure/remove_remote_root
@@ -252,5 +269,4 @@ mysql -e "DROP DATABASE IF EXISTS test;"
 mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%'"
 # flush privileges
 mysql -e "FLUSH PRIVILEGES;"
-
 kube::log::status "Done."
